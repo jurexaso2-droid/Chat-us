@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TAMBAYAN V2 - Social Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    :root { --accent: #ec4899; --bg: #020617; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: #f1f5f9; height: 100vh; overflow: hidden; margin: 0; position: fixed; width: 100%; }
+    .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .glass-input { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); color: white; width: 100%; padding: 12px 16px; border-radius: 12px; outline: none; }
+    .tab-link.active { background: linear-gradient(90deg, rgba(236, 72, 153, 0.15), transparent); color: var(--accent); border-left: 4px solid var(--accent); }
+    
+    /* Reels Swipe Simulation */
+    #tab-reels { height: 100%; position: relative; overflow: hidden; touch-action: none; }
+    .reel-video-container { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; background: black; border-radius: 20px; }
+    
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(236, 72, 153, 0.2); border-radius: 10px; }
+    
+    .comment-box { font-size: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px; margin-top: 4px; }
+    iframe { border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+
+  <div id="toast-container" class="fixed top-5 left-0 right-0 px-5 z-[10000] pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen" class="fixed inset-0 z-[10000] flex items-center justify-center bg-[#010409]">
+    <div class="glass p-8 rounded-[2.5rem] w-full max-w-[340px] text-center">
+      <h1 id="auth-title" class="text-xl font-black mb-6 tracking-tight text-pink-500">TAMBAYAN</h1>
+      <input type="text" id="username" placeholder="Username" class="glass-input mb-4 w-full">
+      <input type="password" id="password" placeholder="Password" class="glass-input mb-6 w-full">
+      <button onclick="handleAuth()" class="w-full py-4 bg-pink-600 rounded-2xl font-black shadow-lg text-white">ENTER</button>
+      <p class="mt-4 text-xs text-slate-500">New here? <button onclick="toggleAuthMode()" id="toggle-btn" class="text-pink-500">Create Account</button></p>
+    </div>
+  </div>
+
+  <div id="main-app" class="hidden flex h-screen w-full">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 glass lg:static lg:translate-x-0 -translate-x-full z-[500] flex flex-col transition-transform">
+      <div class="p-8 flex items-center justify-between">
+        <div class="text-2xl font-black text-pink-500 italic">TAMBAYAN</div>
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 p-2"><i class="fas fa-times"></i></button>
+      </div>
+      
+      <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scroll">
+        <button onclick="switchTab('feed')" class="tab-link active w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-sm"><i class="fas fa-rss"></i> Feed</button>
+        <button onclick="switchTab('global')" class="tab-link w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-sm"><i class="fas fa-globe-asia"></i> Global Chat</button>
+        <button onclick="switchTab('reels')" class="tab-link w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-sm"><i class="fas fa-play"></i> Reels</button>
+        <button onclick="switchTab('ai')" class="tab-link w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-sm"><i class="fas fa-robot"></i> AI Assistant</button>
+        
+        <div class="pt-4 pb-2 px-6 text-[10px] font-black text-slate-500 uppercase">Interactive Tools</div>
+        <!-- CUSTOMIZABLE EMBEDS -->
+        <button onclick="openEmbed('Cosplay', 'https://jurexaso2-droid.github.io/Cosplay')" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-xs text-slate-400 hover:text-white"><i class="fas fa-gamepad"></i> Cosplay</button>
+        <button onclick="openEmbed('Tambayan Meeting', 'https://jurexaso2-droid.github.io/Tambayan/')" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-xs text-slate-400 hover:text-white"><i class="fas fa-paint-brush"></i> Tambayan Meeting</button>
+        <button onclick="openEmbed('Calculator', 'https://www.desmos.com/scientific')" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-xs text-slate-400 hover:text-white"><i class="fas fa-calculator"></i> Calculator</button>
+        <button onclick="openEmbed('Radio', 'https://lofi.cafe')" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-xs text-slate-400 hover:text-white"><i class="fas fa-music"></i> LoFi Radio</button>
+        <button onclick="openEmbed('News', 'https://www.bbc.com/news')" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl font-bold text-xs text-slate-400 hover:text-white"><i class="fas fa-newspaper"></i> World News</button>
+
+        <div class="pt-4 pb-2 px-6 text-[10px] font-black text-slate-500 uppercase flex justify-between">
+            <span>Direct Messages</span>
+            <button onclick="toggleArchivedView()" id="archived-toggle"><i class="fas fa-box-archive"></i></button>
+        </div>
+        <div id="chat-list-container"></div>
+      </nav>
+
+      <div class="p-6 border-t border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="openProfileModal()">
+          <div id="u-avatar" class="w-10 h-10 bg-pink-600 rounded-xl flex items-center justify-center font-bold overflow-hidden text-white">?</div>
+          <span id="u-name" class="text-sm font-bold truncate w-24">User</span>
+        </div>
+        <button onclick="logout()" class="text-slate-500 hover:text-red-500"><i class="fas fa-power-off"></i></button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col bg-[#020617] overflow-hidden">
+      <header class="h-16 flex items-center px-6 border-b border-white/5">
+        <button onclick="toggleSidebar()" class="lg:hidden text-pink-500 mr-4 text-xl"><i class="fas fa-bars"></i></button>
+        <span id="tab-header" class="text-xs font-black uppercase tracking-widest text-pink-500">Feed</span>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-4 custom-scroll relative">
+        
+        <!-- FEED TAB -->
+        <div id="tab-feed" class="tab-content max-w-xl mx-auto space-y-4">
+          <div class="glass p-4 rounded-3xl">
+            <textarea id="post-text" placeholder="Share something..." class="w-full bg-transparent border-none text-sm h-12 resize-none outline-none text-white"></textarea>
+            <button onclick="addPost()" class="w-full py-2 bg-pink-600 rounded-xl font-bold text-xs mt-2 text-white">POST</button>
+          </div>
+          <div id="post-list" class="space-y-4 pb-20"></div>
+        </div>
+
+        <!-- GLOBAL CHAT TAB -->
+        <div id="tab-global" class="tab-content hidden h-full flex flex-col max-w-2xl mx-auto">
+            <div id="global-chat-box" class="flex-1 glass rounded-3xl p-4 overflow-y-auto custom-scroll flex flex-col gap-2 mb-4"></div>
+            <div class="flex gap-2">
+              <input id="global-chat-in" type="text" class="flex-1 bg-slate-800 rounded-full px-6 py-3 text-sm outline-none text-white" placeholder="Message everyone..." onkeypress="if(event.key==='Enter') sendGlobalMsg()">
+              <button onclick="sendGlobalMsg()" class="w-12 h-12 bg-pink-600 rounded-full text-white"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <!-- REELS TAB (Vertical Swipe) -->
+        <div id="tab-reels" class="tab-content hidden flex items-center justify-center">
+            <div class="reel-video-container relative" id="reel-touch-zone">
+                <video id="reels-video" controls loop class="h-full w-full object-contain rounded-2xl bg-black"></video>
+                <div class="absolute bottom-10 right-5 flex flex-col items-center gap-4 text-white">
+                    <button class="w-12 h-12 rounded-full bg-black/50 backdrop-blur"><i class="fas fa-heart"></i></button>
+                    <button class="w-12 h-12 rounded-full bg-black/50 backdrop-blur" onclick="fetchReel()"><i class="fas fa-arrow-down"></i></button>
+                </div>
+                <div class="absolute top-4 left-4 text-white text-[10px] font-bold bg-pink-600 px-2 py-1 rounded">SWIPE UP FOR NEXT</div>
+            </div>
+        </div>
+
+        <!-- EMBED TAB (Web View) -->
+        <div id="tab-embed" class="tab-content hidden h-full flex flex-col">
+            <iframe id="embed-frame" src="" allow="autoplay; encrypted-media; fullscreen;"></iframe>
+        </div>
+
+        <!-- AI TAB -->
+        <div id="tab-ai" class="tab-content hidden h-full flex flex-col items-center">
+          <div id="ai-box" class="w-full max-w-xl flex-1 glass rounded-3xl p-4 overflow-y-auto custom-scroll flex flex-col gap-3 mb-4"></div>
+          <div class="w-full max-w-xl flex gap-2">
+            <input id="ai-in" type="text" class="flex-1 bg-slate-800 rounded-full px-6 py-3 text-sm outline-none text-white" placeholder="Ask AI..." onkeypress="if(event.key==='Enter') askAI()">
+            <button onclick="askAI()" class="w-12 h-12 bg-pink-600 rounded-full text-white"><i class="fas fa-robot"></i></button>
+          </div>
+        </div>
+
+        <!-- PRIVATE CHAT TAB -->
+        <div id="tab-lounge" class="tab-content hidden h-full flex flex-col max-w-2xl mx-auto">
+          <div id="target-name" class="text-pink-500 font-bold mb-2 px-4">@USER</div>
+          <div id="chat-box" class="flex-1 glass rounded-3xl p-4 overflow-y-auto custom-scroll flex flex-col gap-2 mb-4"></div>
+          <div class="flex gap-2">
+            <input id="chat-in" type="text" class="flex-1 bg-slate-800 rounded-full px-6 py-3 text-sm outline-none text-white" placeholder="Private message..." onkeypress="if(event.key==='Enter') sendPrivateMsg()">
+            <button onclick="sendPrivateMsg()" class="w-12 h-12 bg-pink-600 rounded-full text-white"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="profile-modal" class="hidden fixed inset-0 z-[20000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
+    <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
+      <h2 class="text-xl font-black mb-6">Profile Settings</h2>
+      <div id="modal-preview" class="w-24 h-24 bg-pink-600 rounded-2xl mx-auto mb-6 overflow-hidden flex items-center justify-center font-bold text-3xl text-white">?</div>
+      <input type="text" id="p-img-url" placeholder="Paste Image URL" class="glass-input mb-4 text-center w-full">
+      <div class="flex gap-3">
+        <button onclick="saveProfile()" class="flex-1 py-4 bg-pink-600 rounded-2xl font-black text-xs uppercase text-white">Save</button>
+        <button onclick="closeProfileModal()" class="flex-1 py-4 bg-slate-800 rounded-2xl font-black text-xs uppercase text-white">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Gun with more relays for reliability
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gundb-relay.onrender.com/gun']);
+    const dbPosts = gun.get('tambayan_v2_posts');
+    const dbUsers = gun.get('tambayan_v2_users');
+    const dbMessages = gun.get('tambayan_v2_msg');
+    const dbGlobal = gun.get('tambayan_v2_global');
+
+    let activeUser = JSON.parse(localStorage.getItem('ws_session_v2')) || null;
+    let currentRoom = null, currentChatTarget = null, isLoginMode = true, showArchived = false;
+    let reelTouchY = 0;
+
+    // --- AUTH LOGIC ---
+    function handleAuth() {
+      const u = document.getElementById('username').value.trim().toLowerCase();
+      const p = document.getElementById('password').value.trim();
+      if(!u || !p) return notify("Missing fields", "error");
+      
+      dbUsers.get(u).once(data => {
+        if(isLoginMode) {
+          if(data && data.pass === p) { activeUser = {name:u}; finalizeLogin(); }
+          else notify("Wrong password/user", "error");
+        } else {
+          dbUsers.get(u).put({user:u, pass:p, img: ""}); activeUser = {name:u}; finalizeLogin();
+        }
+      });
+    }
+
+    function finalizeLogin() {
+      localStorage.setItem('ws_session_v2', JSON.stringify(activeUser));
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('main-app').classList.remove('hidden');
+      document.getElementById('u-name').innerText = activeUser.name;
+      dbUsers.get(activeUser.name).on(d => {
+        if(d && d.img) {
+          document.getElementById('u-avatar').innerHTML = `<img src="${d.img}" class="h-full w-full object-cover">`;
+        }
+      });
+      loadChatList(); 
+      loadGlobalPosts();
+      loadGlobalChat();
+      setupReelSwipe();
+    }
+
+    // --- FEED FEATURE (POSTS, LIKES, COMMENTS) ---
+    function addPost() {
+      const text = document.getElementById('post-text').value.trim();
+      if(!text) return;
+      const id = Date.now().toString();
+      dbPosts.get(id).put({user: activeUser.name, text: text, time: id});
+      document.getElementById('post-text').value = '';
+    }
+
+    function loadGlobalPosts() {
+      const list = document.getElementById('post-list');
+      dbPosts.map().on((data, id) => {
+        if(!data || !data.text || document.getElementById(`post-${id}`)) return;
+        const div = document.createElement('div');
+        div.id = `post-${id}`;
+        div.className = "glass p-4 rounded-3xl animate-in slide-in-from-bottom-2 duration-300";
+        div.innerHTML = `
+          <div class="flex items-center gap-2 mb-3 cursor-pointer" onclick="openPrivateChat('${data.user}')">
+            <div id="p-av-${id}" class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-xs text-white font-bold">${data.user[0].toUpperCase()}</div>
+            <div class="text-pink-500 font-bold text-xs">@${data.user}</div>
+          </div>
+          <div class="text-sm px-1 text-slate-200 mb-4">${data.text}</div>
+          <div class="flex items-center gap-4 border-t border-white/5 pt-3">
+            <button onclick="reactPost('${id}')" class="text-xs font-bold text-slate-400 hover:text-pink-500"><i class="far fa-heart mr-1"></i> <span id="like-count-${id}">0</span></button>
+            <button onclick="toggleCommentSection('${id}')" class="text-xs font-bold text-slate-400 hover:text-pink-500"><i class="far fa-comment mr-1"></i> Comment</button>
+          </div>
+          <div id="comment-section-${id}" class="hidden mt-3 space-y-2">
+            <div id="comment-list-${id}"></div>
+            <div class="flex gap-2 mt-2">
+              <input type="text" id="com-in-${id}" placeholder="Write a comment..." class="flex-1 bg-white/5 rounded-lg px-3 py-2 text-[10px] outline-none">
+              <button onclick="addComment('${id}')" class="px-3 bg-pink-600 rounded-lg text-[10px] font-bold">SEND</button>
+            </div>
+          </div>
+        `;
+        list.prepend(div);
+        
+        // Listen for Likes
+        dbPosts.get(id).get('likes').map().on((val, user) => {
+            const countEl = document.getElementById(`like-count-${id}`);
+            if(countEl) {
+                dbPosts.get(id).get('likes').once(all => {
+                    let total = 0; Object.values(all || {}).forEach(v => { if(v) total++ });
+                    countEl.innerText = total;
+                });
+            }
+        });
+
+        // Listen for Comments
+        dbPosts.get(id).get('comments').map().on((cData, cId) => {
+            if(!cData || !cData.text) return;
+            const cList = document.getElementById(`comment-list-${id}`);
+            if(!document.getElementById(`com-node-${cId}`)) {
+                const cEl = document.createElement('div');
+                cEl.id = `com-node-${cId}`;
+                cEl.className = "comment-box";
+                cEl.innerHTML = `<span class="text-pink-500 font-bold">@${cData.user}:</span> ${cData.text}`;
+                cList.appendChild(cEl);
+            }
+        });
+      });
+    }
+
+    function reactPost(id) {
+        const ref = dbPosts.get(id).get('likes').get(activeUser.name);
+        ref.once(val => ref.put(!val));
+    }
+
+    function toggleCommentSection(id) {
+        document.getElementById(`comment-section-${id}`).classList.toggle('hidden');
+    }
+
+    function addComment(postId) {
+        const inp = document.getElementById(`com-in-${postId}`);
+        if(!inp.value.trim()) return;
+        dbPosts.get(postId).get('comments').set({user: activeUser.name, text: inp.value.trim()});
+        inp.value = '';
+    }
+
+    // --- GLOBAL CHAT FEATURE ---
+    function sendGlobalMsg() {
+        const inp = document.getElementById('global-chat-in');
+        if(!inp.value.trim()) return;
+        dbGlobal.set({sender: activeUser.name, msg: inp.value.trim(), time: Date.now()});
+        inp.value = '';
+    }
+
+    function loadGlobalChat() {
+        const box = document.getElementById('global-chat-box');
+        dbGlobal.map().on((data, id) => {
+            if(!data || !data.msg || document.getElementById(`gmsg-${id}`)) return;
+            const isMe = data.sender === activeUser.name;
+            const div = document.createElement('div');
+            div.id = `gmsg-${id}`;
+            div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+            div.innerHTML = `
+                <span class="text-[9px] text-slate-500 px-2">@${data.sender}</span>
+                <div class="p-3 rounded-2xl text-sm max-w-[85%] ${isMe ? 'bg-pink-600 text-white' : 'bg-slate-800 text-slate-200'}">${data.msg}</div>
+            `;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    // --- REELS (VERTICAL SWIPE) ---
+    function setupReelSwipe() {
+        const zone = document.getElementById('reel-touch-zone');
+        zone.addEventListener('touchstart', e => reelTouchY = e.touches[0].clientY);
+        zone.addEventListener('touchend', e => {
+            const diff = reelTouchY - e.changedTouches[0].clientY;
+            if(diff > 50) fetchReel(); // Swipe Up
+        });
+    }
+
+    async function fetchReel() {
+      try {
+        const res = await fetch('https://betadash-api-swordslush-production.up.railway.app/shoti');
+        const data = await res.json();
+        const v = document.getElementById('reels-video');
+        if(data.result) {
+            v.style.opacity = '0';
+            setTimeout(() => {
+                v.src = data.result.shotiurl;
+                v.play().catch(()=>{});
+                v.style.opacity = '1';
+            }, 300);
+        }
+      } catch(e) { notify("Reel Error", "error"); }
+    }
+
+    // --- INTERACTIVE EMBED ---
+    function openEmbed(name, url) {
+        switchTab('embed');
+        document.getElementById('tab-header').innerText = name.toUpperCase();
+        document.getElementById('embed-frame').src = url;
+    }
+
+    // --- GENERAL NAVIGATION & UTILS ---
+    function switchTab(id) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.remove('hidden');
+      document.getElementById('tab-header').innerText = id.toUpperCase();
+      
+      const v = document.getElementById('reels-video');
+      if(id === 'reels') { if(!v.src) fetchReel(); v.play().catch(()=>{}); } else { v.pause(); }
+      if(window.innerWidth < 1024) document.getElementById('sidebar').classList.add('-translate-x-full');
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+    function toggleAuthMode() { 
+        isLoginMode = !isLoginMode; 
+        document.getElementById('auth-title').innerText = isLoginMode ? "TAMBAYAN" : "TAMBAYAN JOIN";
+        document.getElementById('toggle-btn').innerText = isLoginMode ? "Create Account" : "Login instead";
+    }
+
+    function notify(m, type='info') {
+      const c = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `p-4 rounded-xl text-white mb-2 text-center text-xs font-bold transition-all ${type==='error'?'bg-red-500':'bg-pink-600 shadow-lg shadow-pink-500/20'}`;
+      el.innerText = m;
+      c.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }, 3000);
+    }
+
+    async function askAI() {
+      const inp = document.getElementById('ai-in');
+      const q = inp.value.trim(); if(!q) return;
+      const box = document.getElementById('ai-box');
+      box.innerHTML += `<div class="bg-pink-600 p-3 rounded-xl self-end max-w-[85%] text-xs text-white">${q}</div>`;
+      inp.value = '';
+      try {
+        const res = await fetch(`https://urangkapolka.vercel.app/api/chatgpt4?prompt=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        const answer = data.result || data.response || "No response";
+        box.innerHTML += `<div class="bg-slate-800 p-3 rounded-xl self-start max-w-[85%] text-xs text-white">${answer}</div>`;
+        box.scrollTop = box.scrollHeight;
+      } catch(e) { notify("AI Busy", "error"); }
+    }
+
+    // Private Chat & List Logic (Simplified for performance)
+    function openPrivateChat(name) {
+      if(name === activeUser.name) return;
+      currentChatTarget = name;
+      currentRoom = [activeUser.name, name].sort().join('_');
+      document.getElementById('chat-box').innerHTML = '';
+      document.getElementById('target-name').innerText = "@" + name.toUpperCase();
+      switchTab('lounge');
+      loadMessages();
+    }
+
+    function loadMessages() {
+      const room = currentRoom;
+      dbMessages.get(room).map().on((data, id) => {
+        if(currentRoom !== room || !data.msg || document.getElementById(`msg-${id}`)) return;
+        const isMe = data.sender === activeUser.name;
+        const div = document.createElement('div');
+        div.id = `msg-${id}`;
+        div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
+        div.innerHTML = `<div class="p-3 px-4 rounded-2xl text-sm max-w-[80%] ${isMe ? 'bg-pink-600' : 'bg-slate-800'} text-white">${data.msg}</div>`;
+        const box = document.getElementById('chat-box');
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      });
+    }
+
+    function sendPrivateMsg() {
+      const inp = document.getElementById('chat-in');
+      if(!inp.value.trim() || !currentRoom) return;
+      dbMessages.get(currentRoom).set({sender: activeUser.name, msg: inp.value.trim()});
+      dbUsers.get(currentChatTarget).get('chat_list').get(activeUser.name).put(true);
+      dbUsers.get(activeUser.name).get('chat_list').get(currentChatTarget).put(true);
+      inp.value = '';
+    }
+
+    function loadChatList() {
+      const container = document.getElementById('chat-list-container');
+      dbUsers.get(activeUser.name).get('chat_list').map().on((val, name) => {
+        if(!name || name === activeUser.name || document.getElementById(`cl-${name}`)) return;
+        const div = document.createElement('div');
+        div.id = `cl-${name}`;
+        div.className = "p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-xl";
+        div.onclick = () => openPrivateChat(name);
+        div.innerHTML = `<div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-[10px] text-pink-500 font-bold">${name[0].toUpperCase()}</div><span class="text-xs font-bold">@${name}</span>`;
+        container.appendChild(div);
+      });
+    }
+
+    function openProfileModal() { document.getElementById('profile-modal').classList.remove('hidden'); }
+    function closeProfileModal() { document.getElementById('profile-modal').classList.add('hidden'); }
+    function saveProfile() { 
+        const url = document.getElementById('p-img-url').value.trim(); 
+        if(url) dbUsers.get(activeUser.name).get('img').put(url); 
+        closeProfileModal(); 
+    }
+    function logout() { localStorage.clear(); location.reload(); }
+
+    window.onload = () => { if(activeUser) finalizeLogin(); };
+  </script>
+</body>
+</html>
