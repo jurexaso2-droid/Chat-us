@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TAMBAYAN - Admin Database</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <style>
+    body { background: #020617; color: #f1f5f9; font-family: sans-serif; }
+    .glass { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); }
+  </style>
+</head>
+<body class="p-4 md:p-10">
+
+  <!-- ADMIN LOGIN -->
+  <div id="admin-login" class="fixed inset-0 z-[1000] flex items-center justify-center bg-[#010409]">
+    <div class="glass p-8 rounded-[2.5rem] w-full max-w-[340px] text-center">
+      <h1 class="text-xl font-black mb-6 text-red-500">ADMIN ACCESS</h1>
+      <input type="password" id="admin-pass" placeholder="Enter Admin Password" class="w-full bg-slate-800 p-4 rounded-xl mb-4 outline-none border border-white/10">
+      <button onclick="checkAdmin()" class="w-full py-4 bg-red-600 rounded-2xl font-black text-white">UNLOCK DATABASE</button>
+      <p class="mt-4 text-xs text-slate-500">Note: Default pass is <b>admin123</b></p>
+    </div>
+  </div>
+
+  <!-- MAIN DATABASE VIEW -->
+  <div id="admin-content" class="hidden max-w-5xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-pink-500">USER DATABASE</h1>
+            <p class="text-slate-400 text-sm mt-1">Connected to GunDB Network</p>
+        </div>
+        <a href="index.html" class="bg-slate-800 px-6 py-2 rounded-xl text-sm font-bold"><i class="fas fa-arrow-left mr-2"></i> Back to App</a>
+    </div>
+
+    <!-- DB INFO CARD -->
+    <div class="glass p-6 rounded-3xl mb-6 flex flex-col md:flex-row gap-6 items-center">
+        <div class="flex-1">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Relay Nodes (Where data lives)</h2>
+            <div class="text-[10px] font-mono text-pink-400">
+                • https://gun-manhattan.herokuapp.com/gun <br>
+                • https://gundb-relay.onrender.com/gun
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-xs font-bold text-slate-500 uppercase">Node Key</div>
+            <div class="text-lg font-bold">tambayan_v2_users</div>
+        </div>
+    </div>
+
+    <!-- USER TABLE -->
+    <div class="glass rounded-3xl overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-white/5 border-b border-white/10">
+                <tr>
+                    <th class="p-4 text-xs font-bold uppercase text-slate-400">Avatar</th>
+                    <th class="p-4 text-xs font-bold uppercase text-slate-400">Username</th>
+                    <th class="p-4 text-xs font-bold uppercase text-slate-400">Password</th>
+                    <th class="p-4 text-xs font-bold uppercase text-slate-400">Profile Image URL</th>
+                    <th class="p-4 text-xs font-bold uppercase text-slate-400">Action</th>
+                </tr>
+            </thead>
+            <tbody id="user-table-body">
+                <!-- Rows injected here -->
+            </tbody>
+        </table>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Gun
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://gundb-relay.onrender.com/gun']);
+    const dbUsers = gun.get('tambayan_v2_users');
+
+    function checkAdmin() {
+        const pass = document.getElementById('admin-pass').value;
+        // You can change 'admin123' to whatever you want
+        if(pass === "admin123") {
+            document.getElementById('admin-login').classList.add('hidden');
+            document.getElementById('admin-content').classList.remove('hidden');
+            loadDatabase();
+        } else {
+            alert("Wrong Admin Password!");
+        }
+    }
+
+    function loadDatabase() {
+        const tbody = document.getElementById('user-table-body');
+        
+        // Map through all users in the GunDB node
+        dbUsers.map().on((data, username) => {
+            if(!data || !username) return;
+
+            // Check if row already exists to update it instead of duplicating
+            let row = document.getElementById(`row-${username}`);
+            if(!row) {
+                row = document.createElement('tr');
+                row.id = `row-${username}`;
+                row.className = "border-b border-white/5 hover:bg-white/5 transition-colors text-sm";
+                tbody.appendChild(row);
+            }
+
+            row.innerHTML = `
+                <td class="p-4">
+                    <div class="w-10 h-10 bg-pink-600 rounded-xl overflow-hidden flex items-center justify-center font-bold">
+                        ${data.img ? `<img src="${data.img}" class="w-full h-full object-cover">` : username[0].toUpperCase()}
+                    </div>
+                </td>
+                <td class="p-4 font-bold text-pink-500">@${username}</td>
+                <td class="p-4"><span class="bg-slate-800 px-2 py-1 rounded text-green-400 font-mono">${data.pass}</span></td>
+                <td class="p-4 text-xs text-slate-500 truncate max-w-[200px]">${data.img || 'No Image'}</td>
+                <td class="p-4">
+                    <button onclick="deleteUser('${username}')" class="text-red-500 hover:text-red-400 text-xs font-bold">
+                        <i class="fas fa-trash mr-1"></i> DELETE
+                    </button>
+                </td>
+            `;
+        });
+    }
+
+    function deleteUser(username) {
+        if(confirm(`Are you sure you want to remove ${username}?`)) {
+            // In GunDB, we "delete" by putting null
+            dbUsers.get(username).put(null);
+            document.getElementById(`row-${username}`).remove();
+        }
+    }
+  </script>
+</body>
+</html>
